@@ -2,7 +2,7 @@
  ============================================================================
  Name        : ls-v1.1.0.c
  Author      : Abdullah Ejaz
- Description : Feature-2: Add long listing format (-l)
+ Description : Combined version - supports normal and long (-l) listing
  ============================================================================
 */
 
@@ -14,7 +14,6 @@
 #include <pwd.h>
 #include <grp.h>
 #include <time.h>
-#include <unistd.h>
 #include <errno.h>
 
 void print_simple_listing(const char *path);
@@ -22,16 +21,17 @@ void print_long_listing(const char *path);
 
 int main(int argc, char *argv[]) {
     int long_listing = 0;
-    char *path = ".";
+    const char *path = ".";
 
-    // Detect -l option
-    if (argc > 1) {
-        if (strcmp(argv[1], "-l") == 0) {
+    // Handle arguments
+    if (argc == 2) {
+        if (strcmp(argv[1], "-l") == 0)
             long_listing = 1;
-            if (argc > 2) path = argv[2];
-        } else {
+        else
             path = argv[1];
-        }
+    } else if (argc == 3 && strcmp(argv[1], "-l") == 0) {
+        long_listing = 1;
+        path = argv[2];
     }
 
     if (long_listing)
@@ -53,9 +53,9 @@ void print_simple_listing(const char *path) {
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_name[0] == '.')
             continue;
-        printf("%s  ", entry->d_name);
+        printf("%s\n", entry->d_name);  // one file per line
     }
-    printf("\n");
+
     closedir(dir);
 }
 
@@ -81,7 +81,7 @@ void print_long_listing(const char *path) {
             continue;
         }
 
-        // Type & permissions
+        // Type and permissions
         printf( (S_ISDIR(st.st_mode)) ? "d" : "-");
         printf( (st.st_mode & S_IRUSR) ? "r" : "-");
         printf( (st.st_mode & S_IWUSR) ? "w" : "-");
@@ -93,14 +93,14 @@ void print_long_listing(const char *path) {
         printf( (st.st_mode & S_IWOTH) ? "w" : "-");
         printf( (st.st_mode & S_IXOTH) ? "x" : "-");
 
-        // Link count
+        // Links
         printf(" %2ld", (long)st.st_nlink);
 
         // Owner and group
         struct passwd *pw = getpwuid(st.st_uid);
         struct group  *gr = getgrgid(st.st_gid);
-        printf(" %-8s %-8s", 
-               pw ? pw->pw_name : "unknown", 
+        printf(" %-8s %-8s",
+               pw ? pw->pw_name : "unknown",
                gr ? gr->gr_name : "unknown");
 
         // Size
